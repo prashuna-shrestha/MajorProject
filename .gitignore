@@ -1,3 +1,7 @@
 node_modules/
 .next/
 dist/
+/backend/db/*.db
+!backend/db/load_csv_to_db.py
+.env
+.env.local

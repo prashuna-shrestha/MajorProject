@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   AppBar,
   Toolbar,
@@ -10,17 +10,14 @@ import {
   Button,
   Menu,
   MenuItem,
-  InputBase,
-  useTheme,
   Divider,
   Drawer,
   List,
   ListItem,
   ListItemText,
 } from "@mui/material";
-import { styled, alpha } from "@mui/material/styles";
+import { alpha } from "@mui/material/styles";
 import {
-  Search as SearchIcon,
   DarkMode,
   LightMode,
   ArrowDropDown,
@@ -28,140 +25,64 @@ import {
   Close as CloseIcon,
 } from "@mui/icons-material";
 import Image from "next/image";
-import Link from "next/link";
 import { useDispatch, useSelector } from "react-redux";
 import { RootState } from "@/store";
 import { toggleMode } from "@/store/themeSlice";
 
-const Search = styled("div")(({ theme }) => ({
-  position: "relative",
-  borderRadius: theme.shape.borderRadius * 5,
-  backgroundColor: alpha(theme.palette.common.white, 0.15),
-  "&:hover": {
-    backgroundColor: alpha(theme.palette.common.white, 0.25),
-  },
-  width: 250,
-  border: `1px solid ${alpha(theme.palette.primary.main, 0.3)}`,
-  transition: "all 0.3s ease",
-}));
+interface HeaderProps {
+  onLoginClick?: () => void;
+  onSignupClick?: () => void;
+}
 
-const SearchIconWrapper = styled("div")(({ theme }) => ({
-  padding: theme.spacing(0, 2),
-  height: "100%",
-  position: "absolute",
-  pointerEvents: "none",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-}));
-
-const StyledInputBase = styled(InputBase)(({ theme }) => ({
-  color: "inherit",
-  width: "100%",
-  "& .MuiInputBase-input": {
-    padding: theme.spacing(1, 1, 1, 0),
-    paddingLeft: `calc(1em + ${theme.spacing(4)})`,
-    transition: theme.transitions.create("width"),
-  },
-}));
-
-export default function Header() {
-  const theme = useTheme();
+export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
   const dispatch = useDispatch();
   const mode = useSelector((state: RootState) => state.theme.mode);
   const isLight = mode === "light";
 
-  const handleThemeChange = () => {
-    dispatch(toggleMode());
-  };
+  const handleThemeChange = () => dispatch(toggleMode());
 
-  const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
-  const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const open = Boolean(anchorEl);
 
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-  };
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => setAnchorEl(event.currentTarget);
   const handleClose = () => setAnchorEl(null);
+  const toggleDrawer = () => setMobileOpen(!mobileOpen);
 
-  const toggleDrawer = () => {
-    setMobileOpen(!mobileOpen);
-  };
+  const headerGradient = isLight
+    ? "linear-gradient(90deg, #9b59b6 0%, #6e4adb 100%)" // vibrant light purple
+    : "linear-gradient(90deg, #332a6d 0%, #1d1649 100%)";
+
+  const navHoverColor = "#4b0082"; // dark purple on hover
+  const signupColor = "#b36fff"; // attractive light purple button
+  const signupHover = "#7a2cc2"; // darker shade on hover
 
   return (
-    <AppBar
-      position="static"
-      sx={{
-        background: isLight
-          ? "linear-gradient(90deg, #6e4adb 0%, #5936d3 100%)"
-          : "linear-gradient(90deg, #332a6d 0%, #1d1649 100%)",
-        color: "white",
-        boxShadow: 3,
-      }}
-    >
-      <Toolbar
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          py: 1.2,
-          px: { xs: 2, md: 4 },
-        }}
-      >
-        {/* Left Section: Logo + Menu Icon */}
+    <AppBar position="static" sx={{ background: headerGradient, color: "white", boxShadow: 4 }}>
+      <Toolbar sx={{ display: "flex", justifyContent: "space-between", py: 1.2, px: { xs: 2, md: 4 } }}>
+        {/* Left section: Logo + Hamburger */}
         <Box display="flex" alignItems="center" gap={2}>
-          <Link href="/" style={{ display: "flex", alignItems: "center" }}>
-            <Image
-              src="/assets/logo.png"
-              alt="FinSight Logo"
-              width={55}
-              height={55}
-            />
-          </Link>
-
-          {/* Hamburger menu (mobile only) */}
-          <IconButton
-            color="inherit"
-            sx={{ display: { xs: "flex", md: "none" } }}
-            onClick={toggleDrawer}
-          >
+          <Image src="/assets/logo.png" alt="Logo" width={55} height={55} style={{ cursor: "pointer" }} />
+          <IconButton color="inherit" sx={{ display: { xs: "flex", md: "none" } }} onClick={toggleDrawer}>
             <MenuIcon />
           </IconButton>
 
-          {/* Desktop Nav Links */}
-          <Box
-            display={{ xs: "none", md: "flex" }}
-            alignItems="center"
-            gap={3}
-            ml={2}
-          >
-            <Link href="/" style={{ textDecoration: "none", color: "inherit" }}>
+          {/* Desktop nav links */}
+          <Box display={{ xs: "none", md: "flex" }} alignItems="center" gap={3} ml={2}>
+            {["Home", "News", "About Us"].map((link) => (
               <Typography
+                key={link}
                 variant="body1"
-                sx={{ cursor: "pointer", fontWeight: 500, "&:hover": { color: "#FFD700" } }}
+                sx={{
+                  cursor: "pointer",
+                  fontWeight: 500,
+                  transition: "0.3s",
+                  "&:hover": { color: navHoverColor, textShadow: "0px 0px 5px #fff" },
+                }}
               >
-                Home
+                {link}
               </Typography>
-            </Link>
-
-            <Link href="/news" style={{ textDecoration: "none", color: "inherit" }}>
-              <Typography
-                variant="body1"
-                sx={{ cursor: "pointer", fontWeight: 500, "&:hover": { color: "#FFD700" } }}
-              >
-                News
-              </Typography>
-            </Link>
-
-            <Link href="/about" style={{ textDecoration: "none", color: "inherit" }}>
-              <Typography
-                variant="body1"
-                sx={{ cursor: "pointer", fontWeight: 500, "&:hover": { color: "#FFD700" } }}
-              >
-                About Us
-              </Typography>
-            </Link>
-
+            ))}
             <Box>
               <Button
                 endIcon={<ArrowDropDown />}
@@ -170,7 +91,8 @@ export default function Header() {
                   color: "inherit",
                   textTransform: "none",
                   fontWeight: 500,
-                  "&:hover": { color: "#FFD700" },
+                  transition: "0.3s",
+                  "&:hover": { color: navHoverColor },
                 }}
               >
                 Analysis
@@ -184,44 +106,29 @@ export default function Header() {
                     mt: 1,
                     borderRadius: 2,
                     minWidth: 180,
-                    bgcolor: isLight ? "#faf5ff" : "#1f1b2e",
-                    color: isLight ? "#3a2d7d" : "#e0d7ff",
+                    bgcolor: isLight ? "#e6d3ff" : "#1f1b2e",
+                    color: isLight ? "#4b0082" : "#e0d7ff",
                   },
                 }}
               >
-                <MenuItem onClick={handleClose} component={Link} href="/analysis/banks">
-                  Bank Sector
-                </MenuItem>
+                <MenuItem onClick={handleClose}>Bank Sector</MenuItem>
                 <Divider />
-                <MenuItem onClick={handleClose} component={Link} href="/analysis/hydropower">
-                  Hydropower
-                </MenuItem>
+                <MenuItem onClick={handleClose}>Hydropower</MenuItem>
                 <Divider />
-                <MenuItem onClick={handleClose} component={Link} href="/analysis/others">
-                  Others
-                </MenuItem>
+                <MenuItem onClick={handleClose}>Others</MenuItem>
               </Menu>
             </Box>
           </Box>
         </Box>
 
-        {/* Right Section: Search + Actions */}
+        {/* Right Section: Theme + Login/Signup */}
         <Box display="flex" alignItems="center" gap={1.5}>
-          <Box sx={{ display: { xs: "none", sm: "flex" }, mr: 2 }}>
-            <Search>
-              <SearchIconWrapper>
-                <SearchIcon />
-              </SearchIconWrapper>
-              <StyledInputBase placeholder="Search stocks..." />
-            </Search>
-          </Box>
-
           <IconButton
             color="inherit"
             onClick={handleThemeChange}
             sx={{
-              bgcolor: alpha("#fff", 0.1),
-              "&:hover": { bgcolor: alpha("#fff", 0.2) },
+              bgcolor: alpha("#fff", 0.15),
+              "&:hover": { bgcolor: alpha("#fff", 0.3) },
               transition: "0.3s",
             }}
           >
@@ -229,85 +136,66 @@ export default function Header() {
           </IconButton>
 
           <Button
-            component={Link}
-            href="/login"
             variant="outlined"
             sx={{
-              color: "white",
-              borderColor: alpha("#fff", 0.5),
+              color: "#fff",
+              borderColor: alpha("#fff", 0.8),
               borderRadius: 2,
               textTransform: "none",
-              "&:hover": { bgcolor: alpha("#fff", 0.15) },
+              fontWeight: 500,
+              "&:hover": { bgcolor: alpha("#fff", 0.25), color: navHoverColor },
               display: { xs: "none", sm: "inline-flex" },
             }}
+            onClick={onLoginClick}
           >
             Login
           </Button>
-
           <Button
-            component={Link}
-            href="/signup"
             variant="contained"
             sx={{
-              bgcolor: "white",
-              color: "#6e4adb",
+              bgcolor: signupColor,
+              color: "#4a2fa1",
               fontWeight: 600,
               borderRadius: 2,
               textTransform: "none",
-              "&:hover": { bgcolor: alpha("#fff", 0.9) },
+              "&:hover": { bgcolor: signupHover, color: "#fff" },
               display: { xs: "none", sm: "inline-flex" },
             }}
+            onClick={onSignupClick}
           >
             Sign Up
           </Button>
         </Box>
-      </Toolbar>
 
-      {/* Drawer for mobile menu */}
-      <Drawer anchor="left" open={mobileOpen} onClose={toggleDrawer}>
-        <Box
-          sx={{
-            width: 250,
-            background: isLight
-              ? "linear-gradient(180deg, #6e4adb 0%, #5936d3 100%)"
-              : "linear-gradient(180deg, #332a6d 0%, #1d1649 100%)",
-            height: "100%",
-            color: "white",
-            p: 2,
-          }}
-        >
-          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-            <Typography variant="h6" fontWeight={600}>
-              FinSight
-            </Typography>
-            <IconButton color="inherit" onClick={toggleDrawer}>
-              <CloseIcon />
-            </IconButton>
+        {/* Drawer for mobile */}
+        <Drawer anchor="left" open={mobileOpen} onClose={toggleDrawer}>
+          <Box sx={{ width: 250, background: headerGradient, height: "100%", color: "white", p: 2 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Typography variant="h6" fontWeight={600}>
+                FinSight
+              </Typography>
+              <IconButton color="inherit" onClick={toggleDrawer}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+            <Divider sx={{ mb: 2, bgcolor: "rgba(255,255,255,0.2)" }} />
+            <List>
+              {["Home", "News", "About Us", "Analysis"].map((text) => (
+                <ListItem key={text} onClick={toggleDrawer} sx={{ cursor: "pointer" }}>
+                  <ListItemText primary={text} />
+                </ListItem>
+              ))}
+              <Divider sx={{ my: 1, bgcolor: "rgba(255,255,255,0.2)" }} />
+              <ListItem onClick={() => { onLoginClick?.(); toggleDrawer(); }} sx={{ cursor: "pointer" }}>
+                <ListItemText primary="Login" />
+              </ListItem>
+              <ListItem onClick={() => { onSignupClick?.(); toggleDrawer(); }} sx={{ cursor: "pointer" }}>
+                <ListItemText primary="Sign Up" />
+              </ListItem>
+            </List>
           </Box>
-          <Divider sx={{ mb: 2, bgcolor: "rgba(255,255,255,0.2)" }} />
-          <List>
-            <ListItem button component={Link} href="/" onClick={toggleDrawer}>
-              <ListItemText primary="Home" />
-            </ListItem>
-            <ListItem button component={Link} href="/news" onClick={toggleDrawer}>
-              <ListItemText primary="News" />
-            </ListItem>
-            <ListItem button component={Link} href="/about" onClick={toggleDrawer}>
-              <ListItemText primary="About Us" />
-            </ListItem>
-            <ListItem button component={Link} href="/analysis/banks" onClick={toggleDrawer}>
-              <ListItemText primary="Analysis" />
-            </ListItem>
-            <Divider sx={{ my: 1, bgcolor: "rgba(255,255,255,0.2)" }} />
-            <ListItem button component={Link} href="/login" onClick={toggleDrawer}>
-              <ListItemText primary="Login" />
-            </ListItem>
-            <ListItem button component={Link} href="/signup" onClick={toggleDrawer}>
-              <ListItemText primary="Sign Up" />
-            </ListItem>
-          </List>
-        </Box>
-      </Drawer>
+        </Drawer>
+      </Toolbar>
     </AppBar>
   );
 }
