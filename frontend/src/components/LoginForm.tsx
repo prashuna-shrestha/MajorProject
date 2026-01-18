@@ -14,6 +14,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { useRouter } from "next/navigation";
 import { loginSuccess } from "@/store/authSlice";
 import { RootState } from "@/store";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+
 
 interface Props {
   closeModal: () => void;
@@ -22,7 +25,9 @@ interface Props {
 
 export default function LoginForm({ closeModal, switchToSignup }: Props) {
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+const [password, setPassword] = useState("");
+const [showPassword, setShowPassword] = useState(false); // <-- add this
+
 
   /* ---------- ADDED LOGIC ---------- */
   const dispatch = useDispatch();
@@ -119,15 +124,26 @@ export default function LoginForm({ closeModal, switchToSignup }: Props) {
       />
 
       <TextField
-        fullWidth
-        label="Password"
-        type="password"
-        variant="outlined"
-        size="small"
-        margin="dense"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+  fullWidth
+  label="Password"
+  type={showPassword ? "text" : "password"}
+  variant="outlined"
+  size="small"
+  margin="dense"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+  InputProps={{
+    endAdornment: (
+      <IconButton
+        onClick={() => setShowPassword(!showPassword)}
+        edge="end"
+      >
+        {showPassword ? <VisibilityOff /> : <Visibility />}
+      </IconButton>
+    ),
+  }}
+/>
+
 
       <Button
         fullWidth
