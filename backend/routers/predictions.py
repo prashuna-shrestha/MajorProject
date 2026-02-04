@@ -1,27 +1,30 @@
-from fastapi import APIRouter, HTTPException  # FastAPI router and exception handling
-from pydantic import BaseModel  # For request/response data validation
-import sys
+# routers/predictions.py  (or wherever your predict router is)
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 import os
+import time
 import numpy as np
 import pandas as pd
-import tensorflow as tf  # TensorFlow for LSTM model loading
-from utils.preprocessing import scale_data  # Custom scaling utility
-from sqlalchemy import create_engine  # SQLAlchemy engine for DB connection
+import tensorflow as tf
+from sqlalchemy import create_engine
 
-# Add parent directory to sys.path
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(BASE_DIR)
+from utils.preprocessing import scale_data
+from ML.train_lstm import DB_CONFIG
 
-from ML.train_lstm import DB_CONFIG  # Database configuration for fetching stock data
-
-# Initialize FastAPI router
 router = APIRouter()
 
-# --- Response model ---
+# -----------------------------
+# Performance caches
+# -----------------------------
+MODEL_CACHE = {}        # symbol -> loaded tf model
+ENGINE_CACHE = None     # single SQLAlchemy engine
+PRED_CACHE = {}         # symbol -> (timestamp, result)
+
+PRED_TTL_SECONDS = 60   # cache prediction for 60s (tune to 300 if you want)
+DEBUG = False           # set True only when debugging
+
+
 class TechnicalPredictionResponse(BaseModel):
-    """
-    Pydantic model to define the structure of the API response.
-    """
     symbol: str
     very_short_term: str
     short_term: str
@@ -29,21 +32,8 @@ class TechnicalPredictionResponse(BaseModel):
     long_term: str
     confidence: float
 
-# --- Helper functions ---
 
 def determine_trend(current, predicted, threshold=0.01):
-    """
-    Classify trend based on percentage change.
-    
-    Args:
-        current (float): Current stock price
-        predicted (float): Predicted stock price
-        threshold (float): Minimum percentage change to consider as trend
-        
-    Returns:
-        trend (str): 'Uptrend', 'Downtrend', or 'Sideways'
-        confidence (float): Percentage magnitude of the change (0-100)
-    """
     change = (predicted - current) / current
     if change > threshold:
         return "Uptrend", min(change * 100, 100)
@@ -52,104 +42,104 @@ def determine_trend(current, predicted, threshold=0.01):
     else:
         return "Sideways", min(abs(change) * 100, 100)
 
+
 def iterative_prediction(model, last_window, days):
-    """
-    Predict next 'days' prices iteratively using the LSTM model.
-    
-    Args:
-        model (tf.keras.Model): Pre-trained LSTM model
-        last_window (np.array): Last 60 price points, shape (window_size, 1)
-        days (int): Number of days ahead to predict
-    
-    Returns:
-        float: Final predicted scaled price
-    """
     window = last_window.copy()
     for _ in range(days):
-        # Reshape for LSTM input (batch_size=1, time_steps=60, features=1)
         x_input = window[-60:].reshape(1, 60, 1)
-        pred_scaled = model.predict(x_input, verbose=0)  # Predict next value
-        window = np.append(window, pred_scaled[-1])  # Append prediction to window
-    return window[-1]  # Return last predicted value
+        pred_scaled = model.predict(x_input, verbose=0)
+        window = np.append(window, pred_scaled[-1])
+    return window[-1]
 
-# --- Endpoint ---
+
+def get_engine():
+    global ENGINE_CACHE
+    if ENGINE_CACHE is None:
+        db_url = (
+            f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}"
+            f"@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
+        )
+        ENGINE_CACHE = create_engine(db_url, pool_pre_ping=True)
+    return ENGINE_CACHE
+
+
+def get_model(symbol: str, model_path: str):
+    sym = symbol.upper()
+    if sym in MODEL_CACHE:
+        return MODEL_CACHE[sym]
+    model = tf.keras.models.load_model(model_path, compile=False)
+    MODEL_CACHE[sym] = model
+    return model
+
+
 @router.get("/predict", response_model=TechnicalPredictionResponse)
 def predict(symbol: str):
-    """
-    Endpoint to predict stock trends for a given symbol.
-    
-    Args:
-        symbol (str): Stock symbol to predict
-    
-    Returns:
-        dict: Predicted trends and confidence for multiple horizons
-    """
-    # Model path
-    MODEL_DIR = os.path.join(BASE_DIR, "ML", "models")
-    model_path = os.path.join(MODEL_DIR, f"{symbol}_model.h5")
-    print("Loading model from:", model_path)
+    sym = symbol.upper().strip()
+    now = time.time()
 
-    # Check if model exists
+    # 1) prediction cache (fast return)
+    if sym in PRED_CACHE:
+        ts, cached = PRED_CACHE[sym]
+        if now - ts < PRED_TTL_SECONDS:
+            return cached
+
+    # 2) model exists?
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    model_dir = os.path.join(base_dir, "ML", "models")
+    model_path = os.path.join(model_dir, f"{sym}_model.h5")
+
     if not os.path.exists(model_path):
         raise HTTPException(status_code=404, detail="Model not found. Train LSTM first.")
 
-    # Load model without compile to avoid Keras metric issues
+    # 3) load model (cached)
     try:
-        model = tf.keras.models.load_model(model_path, compile=False)
+        model = get_model(sym, model_path)
     except Exception as e:
-        print("Error loading model:", e)
         raise HTTPException(status_code=500, detail=f"Error loading model: {e}")
 
-    # SQLAlchemy engine to avoid pandas warning
+    # 4) fetch only close column (fast)
     try:
-        DB_URL = f"postgresql+psycopg2://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['dbname']}"
-        engine = create_engine(DB_URL)
-
-        # Fetch historical closing prices for the symbol
+        engine = get_engine()
         query = "SELECT close FROM stocks WHERE symbol=%s ORDER BY date ASC"
-        df = pd.read_sql(query, engine, params=(symbol,))
-        print(f"Data fetched for {symbol}, shape:", df.shape)
+        df = pd.read_sql(query, engine, params=(sym,))
     except Exception as e:
-        print("Database error:", e)
         raise HTTPException(status_code=500, detail=f"Database error: {e}")
 
-    # Check if data exists
     if df.empty:
         raise HTTPException(status_code=404, detail="Symbol not found or no data available")
 
-    # Prepare data for prediction
-    data = df["close"].values.reshape(-1, 1)  # Extract closing prices
-    scaled, scaler = scale_data(data)  # Scale prices
-    last_window = scaled[-60:].reshape(-1, 1)  # Last 60 days for prediction
-    current_close = df["close"].iloc[-1]  # Current closing price
+    data = df["close"].values.reshape(-1, 1)
+    scaled, scaler = scale_data(data)
+    last_window = scaled[-60:].reshape(-1, 1)
+    current_close = float(df["close"].iloc[-1])
 
-    # Define prediction horizons in days
     horizons = {
         "very_short_term": 3,
         "short_term": 7,
         "mid_term": 20,
-        "long_term": 60
+        "long_term": 60,
     }
 
-    trends = {}  # Store trends for each horizon
-    confidences = []  # Store confidence values
+    trends = {}
+    confidences = []
 
-    # Generate predictions for each horizon
     for key, days in horizons.items():
         predicted_scaled = iterative_prediction(model, last_window, days)
-        predicted_price = scaler.inverse_transform(np.array([[predicted_scaled]]))[0][0]
-        # confidence is calculated here
+        predicted_price = float(scaler.inverse_transform(np.array([[predicted_scaled]]))[0][0])
         trend, conf = determine_trend(current_close, predicted_price)
         trends[key] = trend
         confidences.append(conf)
 
-    overall_confidence = max(confidences)  # single gauge confidence
-
-    print(f"{symbol} predictions: {trends}, confidence: {overall_confidence}%")
-
-    # Return API response
-    return {
-        "symbol": symbol,
+    overall_confidence = float(max(confidences))
+    result = {
+        "symbol": sym,
         **trends,
-        "confidence": round(float(overall_confidence), 2),
+        "confidence": round(overall_confidence, 2),
     }
+
+    if DEBUG:
+        print(f"{sym} prediction cached: {result}")
+
+    # 5) store in cache
+    PRED_CACHE[sym] = (now, result)
+    return result

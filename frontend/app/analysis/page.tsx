@@ -13,6 +13,8 @@ import {
   LineChart,
 } from "lucide-react";
 import { RootState } from "@/store";
+import StockChatbot from "@/components/StockChatbot";
+
 
 // Backend API URL
 const BACKEND_URL = "http://localhost:8000";
@@ -34,17 +36,17 @@ const AnalysisPage: React.FC = () => {
 
   const theme = useSelector((state: RootState) => state.theme.mode) || "light"; // Current theme
 
-  //===========================
-  // 2. Local State
-  //===========================
-  const [data, setData] = useState<StockData[]>([]);
-  const [selectedTrends, setSelectedTrends] = useState<string[]>(["EMA12", "EMA26"]);
+  
+//===========================
+// 2. Local State
+//===========================
+const [data, setData] = useState<StockData[]>([]);
+const [selectedTrends, setSelectedTrends] = useState<string[]>(["EMA12", "EMA26"]);
+const [timeframe, setTimeframe] = useState<string>("5Y");
+const [loading, setLoading] = useState<boolean>(true);
+const [mounted, setMounted] = useState<boolean>(false);
+const [predictionContext, setPredictionContext] = useState<any>(undefined);
 
-
-  const [timeframe, setTimeframe] = useState<string>("5Y"); // default 1 month
-
-  const [loading, setLoading] = useState<boolean>(true);
-  const [mounted, setMounted] = useState<boolean>(false);
 
   //===========================
   // 3. Fetch Data Effects
@@ -131,7 +133,7 @@ const AnalysisPage: React.FC = () => {
     hoverBackground: isDark ? "#4b5563" : "#f1f5f9",
   };
 
-  // ✅ Button colors MATCH chart colors (EMA12 amber, EMA26 sky, BB purple, RSI yellow)
+  //  Button colors MATCH chart colors (EMA12 amber, EMA26 sky, BB purple, RSI yellow)
   const indicatorStyles: Record<
     string,
     {
@@ -167,8 +169,22 @@ const AnalysisPage: React.FC = () => {
     },
   };
 
-  if (!mounted) return null;
+  // fetch prediction when symbol changes
+useEffect(() => {
+  const fetchPrediction = async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/predict?symbol=${symbolParam}`);
+      if (!res.ok) return setPredictionContext(undefined);
+      const json = await res.json();
+      setPredictionContext(json);
+    } catch {
+      setPredictionContext(undefined);
+    }
+  };
+  fetchPrediction();
+}, [symbolParam]);
 
+if (!mounted) return null;
   //===========================
   // 8. Render
   //===========================
@@ -325,7 +341,7 @@ const AnalysisPage: React.FC = () => {
               </h3>
             </div>
 
-            {/* ✅ Colored buttons matching chart colors (VOLUME removed) */}
+            {/* Colored buttons matching chart colors (VOLUME removed) */}
             <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
               {["EMA12", "EMA26", "BB", "RSI"].map((trend) => {
                 const active = selectedTrends.includes(trend);
@@ -481,7 +497,15 @@ const AnalysisPage: React.FC = () => {
           100% { transform: rotate(360deg); }
         }
       `}</style>
+       {/* CHATBOT GOES HERE */}
+       <StockChatbot
+  symbol={symbolParam}
+  data={data}
+  theme={theme as "light" | "dark"}
+  predictionContext={predictionContext}
+/>
     </div>
+    
   );
 };
 

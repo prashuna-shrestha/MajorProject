@@ -42,6 +42,17 @@ const getBrokerCommission = (amount: number) => {
 };
 
 /* ================= SHARE CALCULATOR (CHUKUL STYLE) ================= */
+function ShareCalculatorWrapper() {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) return null; // render nothing on SSR
+
+  return <ShareCalculator />;
+}
 /* ================= SHARE CALCULATOR ================= */
 function ShareCalculator() {
   const [mode, setMode] = useState<"buy" | "sell">("buy");
@@ -95,7 +106,6 @@ function ShareCalculator() {
     setCapitalTaxRate(7.5);
     setSubmitted(false);
     setErrors({});
-    setMode("buy");
   };
 
   return (
@@ -542,12 +552,13 @@ export default function HomePage() {
         </style>
 
 {/* SHARE CALCULATOR */}
-      <Box mt={8}>
-        <Typography variant="h4" textAlign="center" fontWeight={900} mb={3}>
-          📟 Share Calculator
-        </Typography>
-        <ShareCalculator />
-      </Box>
+<Box mt={8}>
+  <Typography variant="h4" textAlign="center" fontWeight={900} mb={3}>
+    📟 Share Calculator
+  </Typography>
+  <ShareCalculatorWrapper />
+</Box>
+
 
     </Container>
   </Box>

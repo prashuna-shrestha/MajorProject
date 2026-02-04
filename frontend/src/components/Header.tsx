@@ -87,19 +87,18 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
   const handleThemeChange = () => dispatch(toggleMode());
 
   const [mobileOpen, setMobileOpen] = useState(false);
-  const toggleDrawer = () => setMobileOpen(!mobileOpen);
-
-  // User dropdown state
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [symbolInput, setSymbolInput] = useState("");
+  const [suggestions, setSuggestions] = useState<StockSuggestion[]>([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const searchRef = useRef<HTMLDivElement>(null);
   const isUserMenuOpen = Boolean(anchorEl);
 
-  const handleUserMenuOpen = (e: React.MouseEvent<HTMLElement>) => {
+  const toggleDrawer = () => setMobileOpen(!mobileOpen);
+  const handleUserMenuOpen = (e: React.MouseEvent<HTMLElement>) =>
     setAnchorEl(e.currentTarget);
-  };
-
-  const handleUserMenuClose = () => {
-    setAnchorEl(null);
-  };
+  const handleUserMenuClose = () => setAnchorEl(null);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -123,12 +122,15 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
 
   const BACKEND_URL = "http://localhost:8000";
 
-  // Search state
-  const [symbolInput, setSymbolInput] = useState("");
-  const [suggestions, setSuggestions] = useState<StockSuggestion[]>([]);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const searchRef = useRef<HTMLDivElement>(null);
+  //=============================================
+  // 7. Hydration-safe mount state
+  //=============================================
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
+  //=============================================
+  // 8. Search Suggestions Effect
+  //=============================================
   useEffect(() => {
     if (!symbolInput || !isAuthenticated) {
       setSuggestions([]);
@@ -263,243 +265,236 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
           </Box>
         </Box>
 
-        {/* Center Search Section */}
+{/* Center Search Section */}
+<Box
+  sx={{ width: { xs: "100%", md: "40%" }, position: "relative" }}
+  ref={searchRef}
+>
+  {mounted && (
+    <Box
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        bgcolor: isLight ? "#fff" : alpha("#fff", 0.15),
+        borderRadius: "8px",
+        pl: 1.5,
+        transition: "box-shadow 0.3s",
+        "&:focus-within": {
+          boxShadow: "0 0 0 2px rgba(255,255,255,0.5)",
+        },
+        cursor: !isAuthenticated ? "pointer" : "text",
+      }}
+      onClick={() => !isAuthenticated && onLoginClick?.()}
+    >
+      <TextField
+        fullWidth
+        variant="standard"
+        placeholder="Search stock or company"
+        value={symbolInput}
+        disabled={!isAuthenticated} // now safe
+        onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
+        onKeyDown={(e) =>
+          e.key === "Enter" && handleSearch(symbolInput)
+        }
+        sx={{ input: { color: isLight ? "black" : "white" } }}
+        InputProps={{
+          disableUnderline: true,
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon sx={{ color: isLight ? "#666" : "#ccc" }} />
+            </InputAdornment>
+          ),
+        }}
+      />
+      <IconButton
+        size="small"
+        onClick={(e) => {
+          e.stopPropagation();
+          handleDropdownClick();
+        }}
+        sx={{ color: isLight ? "#666" : "#ccc" }}
+      >
+        <ArrowDropDownIcon />
+      </IconButton>
+    </Box>
+  )}
+
+  {mounted && isDropdownOpen && suggestions.length > 0 && (
+    <Paper
+      elevation={8}
+      sx={{
+        position: "absolute",
+        width: "100%",
+        top: "110%",
+        left: 0,
+        zIndex: 2000,
+        maxHeight: 350,
+        overflowY: "auto",
+        borderRadius: 2,
+        bgcolor: isLight ? "white" : "#1e1e1e",
+        border: isLight ? "1px solid #eee" : "1px solid #333",
+      }}
+    >
+      {suggestions.map((s) => (
         <Box
-          sx={{ width: { xs: "100%", md: "40%" }, position: "relative" }}
-          ref={searchRef}
+          key={s.symbol}
+          px={2}
+          py={1.5}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            cursor: "pointer",
+            borderBottom: isLight
+              ? "1px solid #f0f0f0"
+              : "1px solid #2d2d2d",
+            "&:hover": {
+              bgcolor: isLight
+                ? alpha("#6e4adb", 0.08)
+                : alpha("#fff", 0.05),
+            },
+            "&:last-child": { borderBottom: "none" },
+          }}
+          onClick={() => handleSearch(s.symbol)}
         >
           <Box
             sx={{
               display: "flex",
+              justifyContent: "space-between",
               alignItems: "center",
-              bgcolor: isLight ? "#fff" : alpha("#fff", 0.15),
-              borderRadius: "8px",
-              pl: 1.5,
-              transition: "box-shadow 0.3s",
-              "&:focus-within": {
-                boxShadow: "0 0 0 2px rgba(255,255,255,0.5)",
-              },
-              cursor: !isAuthenticated ? "pointer" : "text",
             }}
-            onClick={() => !isAuthenticated && onLoginClick?.()}
           >
-            <TextField
-              fullWidth
-              variant="standard"
-              placeholder="Search stock or company"
-              value={symbolInput}
-              disabled={!isAuthenticated}
-              onChange={(e) => setSymbolInput(e.target.value.toUpperCase())}
-              onKeyDown={(e) =>
-                e.key === "Enter" && handleSearch(symbolInput)
-              }
-              sx={{ input: { color: isLight ? "black" : "white" } }}
-              InputProps={{
-                disableUnderline: true,
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: isLight ? "#666" : "#ccc" }} />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <IconButton
-              size="small"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDropdownClick();
-              }}
-              sx={{ color: isLight ? "#666" : "#ccc" }}
+            <Typography
+              fontWeight={700}
+              color={isLight ? "primary.main" : "#bb86fc"}
             >
-              <ArrowDropDownIcon />
-            </IconButton>
+              {s.symbol}
+            </Typography>
+            <Typography fontSize={12} color="text.secondary" noWrap>
+              {s.category}
+            </Typography>
           </Box>
-
-          {isDropdownOpen && suggestions.length > 0 && (
-            <Paper
-              elevation={8}
-              sx={{
-                position: "absolute",
-                width: "100%",
-                top: "110%",
-                left: 0,
-                zIndex: 2000,
-                maxHeight: 350,
-                overflowY: "auto",
-                borderRadius: 2,
-                bgcolor: isLight ? "white" : "#1e1e1e",
-                border: isLight ? "1px solid #eee" : "1px solid #333",
-              }}
-            >
-              {suggestions.map((s) => (
-                <Box
-                  key={s.symbol}
-                  px={2}
-                  py={1.5}
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-                    cursor: "pointer",
-                    borderBottom: isLight
-                      ? "1px solid #f0f0f0"
-                      : "1px solid #2d2d2d",
-                    "&:hover": {
-                      bgcolor: isLight
-                        ? alpha("#6e4adb", 0.08)
-                        : alpha("#fff", 0.05),
-                    },
-                    "&:last-child": { borderBottom: "none" },
-                  }}
-                  onClick={() => handleSearch(s.symbol)}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Typography
-                      fontWeight={700}
-                      color={isLight ? "primary.main" : "#bb86fc"}
-                    >
-                      {s.symbol}
-                    </Typography>
-                    <Typography fontSize={12} color="text.secondary" noWrap>
-                      {s.category}
-                    </Typography>
-                  </Box>
-                  <Typography fontSize={13} color="text.secondary" noWrap>
-                    {s.company_name}
-                  </Typography>
-                </Box>
-              ))}
-            </Paper>
-          )}
+          <Typography fontSize={13} color="text.secondary" noWrap>
+            {s.company_name}
+          </Typography>
         </Box>
-
-        {/* Right Section (Theme + Auth) */}
-        <Box display="flex" alignItems="center" gap={1.5}>
-          <IconButton color="inherit" onClick={handleThemeChange}>
-            {isLight ? <DarkMode /> : <LightMode />}
-          </IconButton>
-{!isAuthenticated ? (
-  <Box display="flex" gap={1}>
-    <Button
-      variant="outlined"
-      color="inherit"
-      onClick={onLoginClick}
-      sx={{ borderRadius: "20px", textTransform: "none" }}
-    >
-      Login
-    </Button>
-    <Button
-      variant="contained"
-      sx={{
-        borderRadius: "20px",
-        bgcolor: "white",
-        color: "#6e4adb",
-        textTransform: "none",
-        "&:hover": { bgcolor: "#f0f0f0" },
-      }}
-      onClick={onSignupClick}
-    >
-      Sign Up
-    </Button>
-  </Box>
-) : (
-<Box sx={{ position: "relative", display: "flex", alignItems: "center", gap: 1 }}>
-  {/* User Card */}
-  <Box
-    sx={{
-      display: "flex",
-      alignItems: "center",
-      gap: 1,
-      p: 0.5,
-      borderRadius: 2,
-      bgcolor: isLight ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.1)",
-      cursor: "pointer",
-    }}
-    onClick={(e) => handleUserMenuOpen(e)}
-  >
-    <Avatar sx={{ width: 35, height: 35, bgcolor: alpha("#fff", 0.2) }}>
-      <PersonIcon />
-    </Avatar>
-
-    <Typography
-      variant="body2"
-      sx={{ fontWeight: 500, display: { xs: "none", sm: "block" } }}
-    >
-      {user?.fullName}
-    </Typography>
-
-    <ArrowDropDownIcon />
-  </Box>
-
-  {/* Logout Menu */}
-  <Menu
-    anchorEl={anchorEl}
-    open={isUserMenuOpen}
-    onClose={handleUserMenuClose}
-    anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-    transformOrigin={{ vertical: "top", horizontal: "right" }}
-    disableScrollLock
-    PaperProps={{
-      sx: {
-        borderRadius: 0,
-        boxShadow: "none",
-        bgcolor: "transparent",
-        mt: 1.5, // vertical spacing from user card
-      },
-    }}
-  >
-    <MenuItem
-  onClick={handleLogout}
-  sx={{
-    display: "flex",
-    alignItems: "center",
-    gap: 1,
-    px: 2,
-    py: 1.2,
-    color: "white",
-    borderRadius: 2,
-    backgroundColor: "#b169f5 !important", // force purple
-    minWidth: 160,
-    "&:hover": {
-      backgroundColor: "#8e4df5 !important", // force hover purple
-    },
-  }}
->
-  {/* Logout Icon */}
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    height="20"
-    viewBox="0 0 24 24"
-    width="20"
-    fill="white"
-  >
-    <path d="M0 0h24v24H0z" fill="none" />
-    <path d="M16 13v-2H7V8l-5 4 5 4v-3h9zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
-  </svg>
-
-  <Typography variant="body1" sx={{ fontWeight: 500 }}>
-    Logout
-  </Typography>
-</MenuItem>
-
-  </Menu>
+      ))}
+    </Paper>
+  )}
 </Box>
 
+        {/* Right Section (Theme + Auth) */}
+        {mounted && (
+          <Box display="flex" alignItems="center" gap={1.5}>
+            <IconButton color="inherit" onClick={handleThemeChange}>
+              {isLight ? <DarkMode /> : <LightMode />}
+            </IconButton>
 
+            {!isAuthenticated ? (
+              <Box display="flex" gap={1}>
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={onLoginClick}
+                  sx={{ borderRadius: "20px", textTransform: "none" }}
+                >
+                  Login
+                </Button>
+                <Button
+                  variant="contained"
+                  sx={{
+                    borderRadius: "20px",
+                    bgcolor: "white",
+                    color: "#6e4adb",
+                    textTransform: "none",
+                    "&:hover": { bgcolor: "#f0f0f0" },
+                  }}
+                  onClick={onSignupClick}
+                >
+                  Sign Up
+                </Button>
+              </Box>
+            ) : (
+              <Box
+                sx={{ position: "relative", display: "flex", alignItems: "center", gap: 1 }}
+              >
+                {/* User Card */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 1,
+                    p: 0.5,
+                    borderRadius: 2,
+                    bgcolor: isLight
+                      ? "rgba(255,255,255,0.15)"
+                      : "rgba(255,255,255,0.1)",
+                    cursor: "pointer",
+                  }}
+                  onClick={(e) => handleUserMenuOpen(e)}
+                >
+                  <Avatar sx={{ width: 35, height: 35, bgcolor: alpha("#fff", 0.2) }}>
+                    <PersonIcon />
+                  </Avatar>
+                  <Typography
+                    variant="body2"
+                    sx={{ fontWeight: 500, display: { xs: "none", sm: "block" } }}
+                  >
+                    {user?.fullName || ""}
+                  </Typography>
+                  <ArrowDropDownIcon />
+                </Box>
 
-
-
-
-)}
-
-
-
-        </Box>
+                {/* Logout Menu */}
+                <Menu
+                  anchorEl={anchorEl}
+                  open={isUserMenuOpen}
+                  onClose={handleUserMenuClose}
+                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+                  transformOrigin={{ vertical: "top", horizontal: "right" }}
+                  disableScrollLock
+                  PaperProps={{
+                    sx: {
+                      borderRadius: 0,
+                      boxShadow: "none",
+                      bgcolor: "transparent",
+                      mt: 1.5,
+                    },
+                  }}
+                >
+                  <MenuItem
+                    onClick={handleLogout}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      px: 2,
+                      py: 1.2,
+                      color: "white",
+                      borderRadius: 2,
+                      backgroundColor: "#b169f5 !important",
+                      minWidth: 160,
+                      "&:hover": { backgroundColor: "#8e4df5 !important" },
+                    }}
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      width="20"
+                      fill="white"
+                    >
+                      <path d="M0 0h24v24H0z" fill="none" />
+                      <path d="M16 13v-2H7V8l-5 4 5 4v-3h9zM20 3h-8v2h8v14h-8v2h8c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2z" />
+                    </svg>
+                    <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                      Logout
+                    </Typography>
+                  </MenuItem>
+                </Menu>
+              </Box>
+            )}
+          </Box>
+        )}
 
         {/* Mobile Drawer */}
         <Drawer anchor="left" open={mobileOpen} onClose={toggleDrawer}>
@@ -512,12 +507,7 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
               p: 3,
             }}
           >
-            <Box
-              display="flex"
-              justifyContent="space-between"
-              alignItems="center"
-              mb={4}
-            >
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
               <Typography variant="h6" fontWeight={700}>
                 FinSight
               </Typography>
@@ -535,10 +525,7 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
                     mb: 2,
                     cursor: "pointer",
                     userSelect: "none",
-                    "&:hover": {
-                      backgroundColor: "transparent",
-                      color: "#4b0082",
-                    },
+                    "&:hover": { backgroundColor: "transparent", color: "#4b0082" },
                   }}
                   onClick={() => {
                     handleNavClick(item.href);
@@ -547,10 +534,7 @@ export default function Header({ onLoginClick, onSignupClick }: HeaderProps) {
                 >
                   <ListItemText
                     primary={item.label}
-                    primaryTypographyProps={{
-                      fontSize: "1.1rem",
-                      fontWeight: 500,
-                    }}
+                    primaryTypographyProps={{ fontSize: "1.1rem", fontWeight: 500 }}
                   />
                 </ListItem>
               ))}
