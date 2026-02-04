@@ -78,6 +78,7 @@ const SectionCard = ({
         }}
       >
         <AccordionSummary
+        component="div"
   expandIcon={null}
   sx={{
   minHeight: 120,
@@ -142,6 +143,7 @@ const SectionCard = ({
             {/* Custom Plus Button - Right Side */}
             <motion.div animate={{ rotate: expanded ? 45 : 0 }} transition={{ duration: 0.3 }}>
               <IconButton
+              component="span"
                 onClick={(e) => {
                   e.stopPropagation(); // Prevent accordion default click
                   setExpanded(!expanded);
