@@ -1,20 +1,34 @@
-def explain_rsi(rsi: float) -> str:
+def explain_rsi_simple(rsi: float) -> str:
     if rsi >= 70:
-        return f"{rsi:.1f} (overbought zone)"
+        return f"📈 RSI {rsi:.1f}: The stock may be OVERBOUGHT (price went up too fast)."
     if rsi <= 30:
-        return f"{rsi:.1f} (oversold zone)"
-    return f"{rsi:.1f} (neutral)"
+        return f"📉 RSI {rsi:.1f}: The stock may be OVERSOLD (price dropped too fast)."
+    return f"⚖️ RSI {rsi:.1f}: The stock is in a NORMAL range."
 
-def explain_ema(ema12: float, ema26: float) -> str:
+
+def explain_ema_simple(ema12: float, ema26: float) -> str:
     if ema12 > ema26:
-        return f"EMA12 ({ema12:.2f}) > EMA26 ({ema26:.2f}) → bullish momentum"
+        return (
+            f"🟢 Short-term trend is ABOVE long-term trend → "
+            f"price momentum looks POSITIVE."
+        )
     if ema12 < ema26:
-        return f"EMA12 ({ema12:.2f}) < EMA26 ({ema26:.2f}) → bearish momentum"
-    return f"EMA12 ({ema12:.2f}) ≈ EMA26 ({ema26:.2f}) → sideways"
+        return (
+            f"🔴 Short-term trend is BELOW long-term trend → "
+            f"price momentum looks WEAK."
+        )
+    return "🟡 Short-term and long-term trends are CLOSE → no clear direction."
 
-def explain_bb(price: float, upper: float, lower: float) -> str:
+
+def explain_bb_simple(price: float, upper: float, lower: float) -> str:
     if price > upper:
-        return f"Price ({price:.2f}) above upper band ({upper:.2f}) → strong move / possible overextension"
+        return (
+            "🚀 Price is VERY HIGH compared to normal → "
+            "strong move, but may be overstretched."
+        )
     if price < lower:
-        return f"Price ({price:.2f}) below lower band ({lower:.2f}) → weak move / possible oversold"
-    return f"Price ({price:.2f}) inside bands ({lower:.2f} - {upper:.2f}) → normal volatility"
+        return (
+            "🧊 Price is VERY LOW compared to normal → "
+            "weak move, but may rebound."
+        )
+    return "🌊 Price is moving normally → no unusual volatility."
