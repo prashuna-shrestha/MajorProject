@@ -1,6 +1,10 @@
-# routers/chat/response.py
 from .decision_engine import trade_decision
-from .explainers import explain_ema, explain_rsi, explain_bb
+from .explainers import (
+    explain_ema_simple as explain_ema,
+    explain_rsi_simple as explain_rsi,
+    explain_bb_simple as explain_bb,
+)
+
 
 BASIC_HELP = """I can help with:
 - Stock basics (what is stock/share/volume)
@@ -90,11 +94,15 @@ def build_response(intent: str, ctx: dict, question: str) -> str:
 
     if any(x in q for x in ["what is bollinger", "explain bollinger", "bb meaning"]):
         return (
-            "Bollinger Bands measure volatility.\n"
-            "- Upper/Lower bands around a moving average\n"
-            "- Price near upper band: strong move (sometimes overextended)\n"
-            "- Price near lower band: weak move (sometimes oversold)"
-        )
+    "Bollinger Bands help you understand how unusual a stock's price is and how volatile the market is:\n"
+    "- The middle line is the average price (normal level).\n"
+    "- The upper line shows the stock is higher than usual (might be overbought).\n"
+    "- The lower line shows the stock is lower than usual (might be oversold).\n"
+    "- When the bands are very close, the price is calm but could move sharply soon.\n"
+    "- When the bands are far apart, price is moving a lot; the trend is strong.\n"
+    "Think of it like a car on a road: upper/lower rails show how fast or slow it is compared to normal."
+)
+
 
     # ---------------------------
     # CONFIDENCE
