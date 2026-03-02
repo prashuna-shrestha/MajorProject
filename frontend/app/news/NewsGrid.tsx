@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useTheme } from "@mui/material";
 
 //====================
 // 1. Type Definitions
@@ -32,7 +32,8 @@ function timeAgo(date: string) {
 
   for (const i of intervals) {
     const count = Math.floor(seconds / i.seconds);
-    if (count >= 1) return `${count} ${i.label}${count > 1 ? "s" : ""} ago`;
+    if (count >= 1)
+      return `${count} ${i.label}${count > 1 ? "s" : ""} ago`;
   }
 
   return "Just now";
@@ -42,29 +43,21 @@ function timeAgo(date: string) {
 // 3. Main Component
 //====================
 export default function NewsGrid({ news }: { news: NewsItem[] }) {
-  const [isDark, setIsDark] = useState(false);
 
-  // Detect system dark mode
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    setIsDark(mediaQuery.matches);
+  // ✅ Get theme from MUI (Redux controlled)
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
 
-    const handler = (e: MediaQueryListEvent) => setIsDark(e.matches);
-    mediaQuery.addEventListener("change", handler);
-
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
-
-  // Theme-aware colors
+  // Theme-aware colors (now based on MUI theme)
   const colors = {
-    cardBg: isDark ? "#111827" : "#ffffff",
-    border: isDark ? "#374151" : "#e5e7eb",
-    textPrimary: isDark ? "#f9fafb" : "#111827",
-    textSecondary: isDark ? "#d1d5db" : "#4b5563",
+    cardBg: theme.palette.background.paper,
+    border: theme.palette.divider,
+    textPrimary: theme.palette.text.primary,
+    textSecondary: theme.palette.text.secondary,
     badgeBg: isDark ? "#1f2937" : "#f1f5f9",
-    badgeText: isDark ? "#e5e7eb" : "#111827",
-    timeText: isDark ? "#9ca3af" : "#6b7280",
-    link: "#2563eb",
+    badgeText: theme.palette.text.primary,
+    timeText: theme.palette.text.secondary,
+    link: theme.palette.primary.main,
   };
 
   return (
@@ -91,12 +84,21 @@ export default function NewsGrid({ news }: { news: NewsItem[] }) {
             <img
               src={item.image || "/placeholder.jpg"}
               alt={item.title}
-              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
             />
           </div>
 
           {/* CONTENT */}
-          <div style={{ padding: "14px" }}>
+          <div
+            style={{
+              padding: "24px",
+              background: theme.palette.background.default,
+            }}
+          >
             {/* Source & Time */}
             <div
               style={{

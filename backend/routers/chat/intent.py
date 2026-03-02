@@ -1,4 +1,3 @@
-# routers/chat/intent.py
 
 INTENTS = {
     "BUY_SELL": [

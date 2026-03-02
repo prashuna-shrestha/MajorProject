@@ -1,22 +1,12 @@
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import psycopg2
 import pandas as pd
 import numpy as np
 
+from core.database import get_db_connection  # ✅ centralized DB connection
+
 # Initialize API router
 router = APIRouter()
-
-# --- Database config ---
-# PostgreSQL connection settings
-DB_CONFIG = {
-    "dbname": "stock_data",
-    "user": "postgres",
-    "password": "root",
-    "host": "localhost",
-    "port": "5433",
-}
 
 # --- Response model ---
 class TrendResponse(BaseModel):
@@ -49,13 +39,10 @@ def determine_trend(current, ma):
     Determines trend direction by comparing
     current price to moving average.
     """
-    # Price is significantly above MA
     if current > ma * 1.01:
         return "Uptrend"
-    # Price is significantly below MA
     elif current < ma * 0.99:
         return "Downtrend"
-    # Price is near MA
     else:
         return "Sideways"
 
@@ -64,7 +51,6 @@ def compute_trends(df: pd.DataFrame):
     Computes short, mid, and long-term trends
     along with a confidence score.
     """
-
     # Convert Decimal values from DB to float
     for col in ["open", "high", "low", "close", "close_norm"]:
         df[col] = df[col].astype(float)
@@ -79,7 +65,7 @@ def compute_trends(df: pd.DataFrame):
     short = determine_trend(current_close, df["MA5"].iloc[-1])
 
     # Mid-term trend based on 20-day MA
-    mid = determine_trend(current_close, df["MA20"].iloc[-1]) 
+    mid = determine_trend(current_close, df["MA20"].iloc[-1])
 
     # Long-term trend based on 50-day MA
     long = determine_trend(current_close, df["MA50"].iloc[-1])
@@ -106,8 +92,8 @@ def technical_status(symbol: str):
     analysis for a given stock symbol.
     """
     try:
-        # Establish database connection
-        conn = psycopg2.connect(**DB_CONFIG)
+        # Establish database connection using centralized function
+        conn = get_db_connection()
 
         # SQL query to fetch historical stock data
         query = """

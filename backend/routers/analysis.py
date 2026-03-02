@@ -47,8 +47,8 @@ RSI helps identify overbought or oversold conditions.
 """
 def calculate_rsi(series: pd.Series, period=14):
     delta = series.diff() # difference between today and yesterday
-    gain = delta.where(delta > 0, 0.0)
-    loss = -delta.where(delta < 0, 0.0)
+    gain = delta.where(delta > 0, 0.0) #keeps only postitive changes else 0
+    loss = -delta.where(delta < 0, 0.0) #keeps negatve changes
     #calculate avg gain and avg loss over 14 days
     avg_gain = gain.rolling(window=period, min_periods=1).mean()
     avg_loss = loss.rolling(window=period, min_periods=1).mean()
@@ -131,12 +131,12 @@ def resample_data(df: pd.DataFrame, timeframe: str) -> pd.DataFrame:
     df_resampled["price_change"] = df_resampled["close"].pct_change(fill_method=None) * 100
     df_resampled["price_change"] = df_resampled["price_change"].replace([np.inf, -np.inf, np.nan], 0)
     df_resampled["rolling_mean_20"] = df_resampled["close"].rolling(window=20, min_periods=1).mean()
-    df_resampled["EMA12"] = df_resampled["close"].ewm(span=12).mean()
+    df_resampled["EMA12"] = df_resampled["close"].ewm(span=12).mean() #rsi 12 calculation through pandas internally .ewn() function
     df_resampled["EMA26"] = df_resampled["close"].ewm(span=26).mean()
     df_resampled["RSI14"] = calculate_rsi(df_resampled["close"])
     df_resampled["BB_UPPER"], df_resampled["BB_LOWER"], df_resampled["BB_MA20"] = calculate_bollinger(df_resampled["close"])
 
-    df_resampled.reset_index(inplace=True)
+    df_resampled.reset_index(inplace=True) #date becomes normal column again
     return clean_dataframe(df_resampled)
 
 
@@ -158,7 +158,7 @@ Returns:
 """
 @router.get("/stocks")
 def get_stock(symbol: str = "NEPSE", timeframe: str = "1Y"):
-    conn = get_db_connection()
+    conn = get_db_connection() #connection to fetch stock data
 
     # SQL query to fetch stock data
     query = """

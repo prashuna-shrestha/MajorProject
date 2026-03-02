@@ -370,7 +370,7 @@ export default function LearnPage() {
                   title: "Breakouts",
                   icon: <Speed />,
                   content:
-                    "Mastering Breakout Trading: Key Strategies for SuccessA stock market breakout is when a stock's price moves decisively past a key support or resistance level, breaking its established trading range, often signaling the start of a strong new trend, confirmed by a surge in trading volume. Traders look for upside breakouts (above resistance) or downside breakouts (below support) to enter positions, aiming to capture momentum, but must watch for fakeouts where the price quickly reverses.",
+                    "Mastering Breakout Trading: Key Strategies for Success. A stock market breakout is when a stock's price moves decisively past a key support or resistance level, breaking its established trading range, often signaling the start of a strong new trend, confirmed by a surge in trading volume. Traders look for upside breakouts (above resistance) or downside breakouts (below support) to enter positions, aiming to capture momentum, but must watch for fakeouts where the price quickly reverses.",
                 },
               ].map((item, index) => (
                 <Grid key={item.title} item xs={12} md={6}>

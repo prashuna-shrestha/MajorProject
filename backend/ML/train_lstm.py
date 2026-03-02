@@ -1,79 +1,93 @@
-import sys  # Provides access to system-specific parameters and functions
-import os   # Provides functions to interact with the operating system
+# ===================================================
+# 1. System Imports
+# ===================================================
+import sys
+import os
 
-# Make backend folder discoverable so Python can import modules from parent directories
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Directory of this script
-PARENT_DIR = os.path.dirname(BASE_DIR)                 # Parent directory of script
-sys.path.append(PARENT_DIR)                             # Add parent directory to Python path
-
-# Import libraries for database, data handling, and numerical operations
-import psycopg2  
-import pandas as pd  
-import numpy as np   
-
-# Import functions from your own modules
-from ML.lstm_model import create_lstm                 # Function to create LSTM model
-from utils.preprocessing import scale_data, create_sequences  # Functions to preprocess data
+# Make backend folder discoverable
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PARENT_DIR = os.path.dirname(BASE_DIR)
+sys.path.append(PARENT_DIR)
 
 
-# Database connection configuration
-DB_CONFIG = {
-    "dbname": "stock_data",  
-    "user": "postgres",      
-    "password": "root",      
-    "host": "localhost",     
-    "port": "5433",          
-}
+# ===================================================
+# 2. Library Imports
+# ===================================================
+import pandas as pd
+import numpy as np
 
-# Set up directory to save trained models
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))  # Current script directory
-MODEL_DIR = os.path.join(SCRIPT_DIR, "models")           # "models" folder inside current directory
-os.makedirs(MODEL_DIR, exist_ok=True)                   # Create folder if it doesn't exist
+# Import centralized DB connection
+from core.database import get_db_connection
+
+# Import project modules
+from ML.lstm_model import create_lstm
+from utils.preprocessing import scale_data, create_sequences
 
 
-# Function to train LSTM model for a single stock symbol
+# ===================================================
+# 3. Model Directory Setup
+# ===================================================
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(SCRIPT_DIR, "models")
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+
+# ===================================================
+# 4. Train LSTM for Single Symbol
+# ===================================================
 def train_for_symbol(symbol, df):
-    df = df.sort_values("date")                  # Ensure data is sorted by date
-    data = df["close"].values.reshape(-1, 1)     # Extract closing prices as a column vector
-    scaled, scaler = scale_data(data)            # Scale data (normalize to 0-1 range)
 
-    X, y = create_sequences(scaled)              # Create sequences for time-series learning
-    X = np.array(X).reshape(X.shape[0], X.shape[1], 1)  # Reshape for LSTM input (samples, time steps, features)
+    df = df.sort_values("date")
 
-    model = create_lstm((X.shape[1], 1))         # Create LSTM model with input shape
-    model.fit(X, y, epochs=10, batch_size=32, verbose=1)  # Train the model
+    data = df["close"].values.reshape(-1, 1)
+    scaled, scaler = scale_data(data)
 
-    model.save(f"{MODEL_DIR}/{symbol}_model.h5") # Save trained model to file
-    print(f"✔ Model saved for {symbol}")         # Print success message
+    X, y = create_sequences(scaled)
+    X = np.array(X).reshape(X.shape[0], X.shape[1], 1)
+
+    model = create_lstm((X.shape[1], 1))
+
+    model.fit(X, y, epochs=10, batch_size=32, verbose=1)
+
+    model.save(f"{MODEL_DIR}/{symbol}_model.h5")
+
+    print(f"✔ Model saved for {symbol}")
 
 
-# Main function to train models for all symbols in database
+# ===================================================
+# 5. Main Training Function
+# ===================================================
 def main():
-    conn = psycopg2.connect(**DB_CONFIG) 
-    cur = conn.cursor()                  
 
-    cur.execute("SELECT DISTINCT symbol FROM stocks")  # Get all unique stock symbols
-    symbols = [row[0] for row in cur.fetchall()]      # Fetch symbols as a list
+    conn = get_db_connection()   # using centralized DB connection
+    cur = conn.cursor()
 
-    for symbol in symbols:                     
-        print(f"Training model for: {symbol}")   # Print which symbol is being trained
+    # Get unique stock symbols
+    cur.execute("SELECT DISTINCT symbol FROM stocks")
+    symbols = [row[0] for row in cur.fetchall()]
 
-        # Read historical closing price data for the current symbol
+    for symbol in symbols:
+
+        print(f"Training model for: {symbol}")
+
         df = pd.read_sql(
             "SELECT date, close FROM stocks WHERE symbol=%s ORDER BY date ASC",
             conn,
-            params=(symbol,),                    # Parameterized query to avoid SQL injection
+            params=(symbol,)
         )
 
-        if len(df) < 100:                        # Skip symbols with too little data
+        if len(df) < 100:
             print(f"Skipping {symbol} (not enough data)")
             continue
 
-        train_for_symbol(symbol, df)             # Train model for this symbol
+        train_for_symbol(symbol, df)
 
-    conn.close()  
+    cur.close()
+    conn.close()
 
 
-# Run main() if this script is executed directly
+# ===================================================
+# 6. Run Script Directly
+# ===================================================
 if __name__ == "__main__":
     main()

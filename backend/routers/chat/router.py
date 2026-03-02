@@ -1,6 +1,6 @@
-# routers/chat/router.py
+
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel # used to define request and response data models
 from typing import Any, Dict, List, Optional
 
 from .domain_guard import is_stock_question
@@ -10,7 +10,7 @@ from .response import build_response
 
 router = APIRouter(prefix="/api", tags=["Chat"])
 
-class ChatRequest(BaseModel):
+class ChatRequest(BaseModel): #expect question from frontend
     question: str
     symbol: str
     timeframe: Optional[str] = "1Y"
@@ -22,13 +22,13 @@ class ChatResponse(BaseModel):
 
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
-    q = (req.question or "").strip()
+    q = (req.question or "").strip() #removes extra spaces
     if not q:
         raise HTTPException(status_code=400, detail="Question is required")
 
-    intent = detect_intent(q)
+    intent = detect_intent(q) #question categories
 
-    # ✅ CONCEPT questions do NOT need DB/predict at all
+    # CONCEPT questions do NOT need DB/predict at all
     if intent == "CONCEPT":
         reply = build_response(intent, {}, q)
         return {"reply": reply, "used_context": {}}
@@ -46,4 +46,4 @@ def chat(req: ChatRequest):
         return {"reply": f"No data found for symbol {req.symbol}.", "used_context": {}}
 
     reply = build_response(intent, ctx, q)
-    return {"reply": reply, "used_context": ctx}
+    return {"reply": reply, "used_context": ctx} #actual output
