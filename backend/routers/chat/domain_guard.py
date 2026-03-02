@@ -1,4 +1,8 @@
-# routers/chat/domain_guard.py
+# ------------------------------------------------------------
+# Set of keywords related to stock market and trading.
+# This is used to detect whether a user question
+# is related to stocks or financial markets.
+# ------------------------------------------------------------
 
 STOCK_KEYWORDS = {
     "stock","share","price","buy","sell","hold","trend","rsi","ema",
@@ -9,5 +13,5 @@ STOCK_KEYWORDS = {
 }
 
 def is_stock_question(question: str) -> bool:
-    q = question.lower()
+    q = question.lower()   # Convert the entire question to lowercase
     return any(k in q for k in STOCK_KEYWORDS)

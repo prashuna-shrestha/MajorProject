@@ -278,9 +278,9 @@ export default function HomePage() {
       .catch((err) => console.error("Market movers error:", err));
   }, []);
 
-  // -------------------------
+  // --------------------------------------------------
   // Function: render mini trend chart for each stock
-  // -------------------------
+  // ---------------------------------------------------
   const renderChart = (prices: number[], positive: boolean) => {
     const chartData = prices
       .map((price, index) => ({ day: `D${7 - index}`, price }))

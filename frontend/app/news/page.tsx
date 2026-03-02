@@ -1,6 +1,3 @@
-// app/news/page.tsx
-
-
 import NewsGrid from "./NewsGrid";
 
 //====================

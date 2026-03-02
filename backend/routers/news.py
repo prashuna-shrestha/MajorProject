@@ -9,5 +9,5 @@ router = APIRouter(prefix="/api/news", tags=["News"])
 # Define a GET endpoint to get all news
 # The empty string "" means this will respond to /api/news
 @router.get("")
-async def get_all_news():  
+async def get_all_news():  #function that will be executed when someone hits the endpoint /api/news
     return fetch_all_news()  

@@ -156,7 +156,7 @@ export default function AboutUsPage() {
             🤖 Learners studying machine learning in finance
           </Typography>
           <Typography color={textSecondary}>
-            🇳🇵 Individuals analyzing NEPSE market patterns
+               Individuals analyzing NEPSE market patterns
           </Typography>
         </Stack>
       </Card>

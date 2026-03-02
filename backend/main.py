@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI # creat your web api server
 from fastapi.middleware.cors import CORSMiddleware
 from routers import analysis, stocks, auth, technical_status
 from routers.predictions import router as lstm_predict  # Router for LSTM predictions
